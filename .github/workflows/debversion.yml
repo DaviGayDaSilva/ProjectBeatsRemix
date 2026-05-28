@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,19 +24,30 @@ jobs:
           rm -rf package
           mkdir -p package/DEBIAN
           mkdir -p package/opt/html-app
-          cp -r ./* package/opt/html-app/
+
+          find . -maxdepth 1 \
+            ! -name "." \
+            ! -name "package" \
+            ! -name ".github" \
+            -exec cp -r {} package/opt/html-app/ \;
 
       - name: Build DEB
         run: |
-          VERSION=1.0.${{ github.run_number }}
+          VERSION=1.0.${GITHUB_RUN_NUMBER}
 
-          mkdir -p package/DEBIAN
-
-          printf "Package: html-app\nVersion: %s\nSection: web\nPriority: optional\nArchitecture: all\nMaintainer: Davi\nDescription: HTML app convertido para pacote .deb\n" "$VERSION" > package/DEBIAN/control
+          cat <<EOF > package/DEBIAN/control
+Package: html-app
+Version: $VERSION
+Section: web
+Priority: optional
+Architecture: all
+Maintainer: Davi
+Description: HTML app convertido para pacote .deb
+EOF
 
           dpkg-deb --build package html-app-$VERSION.deb
 
-      - name: Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}

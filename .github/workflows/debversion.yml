@@ -1,0 +1,46 @@
+name: Build DEB + Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev
+
+      - name: Prepare package
+        run: |
+          rm -rf package
+          mkdir -p package/DEBIAN
+          mkdir -p package/opt/html-app
+          cp -r ./* package/opt/html-app/
+
+      - name: Build DEB
+        run: |
+          VERSION=1.0.${{ github.run_number }}
+
+          mkdir -p package/DEBIAN
+
+          printf "Package: html-app\nVersion: %s\nSection: web\nPriority: optional\nArchitecture: all\nMaintainer: Davi\nDescription: HTML app convertido para pacote .deb\n" "$VERSION" > package/DEBIAN/control
+
+          dpkg-deb --build package html-app-$VERSION.deb
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          files: |
+            html-app-1.0.${{ github.run_number }}.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
